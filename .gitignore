@@ -1,0 +1,15 @@
+__pycache__/
+
+# dirs
+models/
+checkpoints/
+dataset/
+wandb/
+test/
+example_data/
+example_scripts/
+*.whl
+
+# files
+.vscode/launch.json
+

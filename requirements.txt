@@ -1,0 +1,16 @@
+torch
+torchvision
+transformers @ git+https://github.com/huggingface/transformers.git
+accelerate
+peft
+deepspeed
+tiktoken
+matplotlib
+bitsandbytes
+av
+sentencepiece
+wandb
+protobuf
+
+# for qwen
+transformers_stream_generator
