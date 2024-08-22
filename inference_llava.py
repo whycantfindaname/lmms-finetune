@@ -5,32 +5,34 @@ import torch
 from PIL import Image
 from transformers import AutoProcessor, LlavaForConditionalGeneration
 
-device = "cuda"
+device = "cuda:0"
 # 模型路径
-original_model_id = (
-    "/home/u9920230028/lmms-finetune-main-v1/models/llava-interleave-qwen-7b"
-)
-model_id = "/home/u9920230028/lmms-finetune-main-v1/checkpoints/llava-interleave-qwen-7b_lora-True_qlora-False-v1"
+original_model_id = "./models/llava-interleave-qwen-7b"
+model_id = "./checkpoints/llava-interleave-qwen-7b_lora-True_qlora-False-3k"
 
 # 加载模型和处理器
 model = LlavaForConditionalGeneration.from_pretrained(
-    original_model_id, torch_dtype=torch.float16, low_cpu_mem_usage=True
+    model_id, torch_dtype=torch.float16, low_cpu_mem_usage=True
 ).to(device)
 
 processor = AutoProcessor.from_pretrained(original_model_id)
-json_file = "/home/u9920230028/lmms-finetune-main-v1/dataset/json_v1/val_data.json"
+json_file = "./dataset/json/llava_train_gt.json"
 # 读取JSON文件
 with open(json_file, "r", encoding="utf-8") as file:
     data = json.load(file)
 
 # 图像文件夹路径
-image_folder = "/home/u9920230028/lmms-finetune-main-v1/dataset/images_v1"
+image_folder = "./dataset/images"
 
 new_json_data = []
 
+# data1 = [
+# item for item in data if item["image"] == "ICME2021_UGC0088_720x1280_30_crf_47.png"
+# ]
+
 for entry in data:
     image_name = entry["image"]
-    question = entry["conversations"][0]["value"].replace("<image>", "")
+    question = entry["conversations"][2]["value"]
     print(question)
     # 构建对话
     conversation = [
@@ -69,7 +71,7 @@ for entry in data:
     new_json_data.append({"image": image_name, "generated_answer": generated_text})
 
 # 写入新的JSON文件
-with open("generated_answers_v1.json", "w", encoding="utf-8") as file:
+with open("llava_train_pred.json", "w", encoding="utf-8") as file:
     json.dump(new_json_data, file, ensure_ascii=False, indent=4)
 
 print("New JSON file created with generated answers.")

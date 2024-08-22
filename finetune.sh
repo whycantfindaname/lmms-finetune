@@ -22,8 +22,8 @@ DISTRIBUTED_ARGS="
 
 # arguments that are very likely to be changed
 # according to your own case
-MODEL_ID=qwen-vl-chat  # model id; pick on by running `python supported_models.py`
-MODEL_PATH=./models/Qwen-VL-Chat     # model path; if None, will download the model from huggingface
+MODEL_ID=llava-interleave-qwen-7b  # model id; pick on by running `python supported_models.py`
+MODEL_PATH=./models/llava-interleave-qwen-7b    # model path; if None, will download the model from huggingface
 TRAIN_DATA_PATH=./dataset/json/train_data_bbox.json # path to the training data json file
 EVAL_DATA_PATH=./dataset/json/val_data_bbox.json   # path to the evaluation data json file (optional)
 IMAGE_FOLDER=./dataset/images                  # path to the image root folder; if provided, the image paths in the json should be relative

@@ -9,4 +9,4 @@
 #SBATCH --error=/home/u9920230028/lmms-finetune/testbug/inference_job_error.txt
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=jasonliaonk21@gmail.com
-python inference.py
+python inference_llava.py
