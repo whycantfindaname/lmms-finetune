@@ -10,7 +10,7 @@ from supported_models import MODEL_FAMILIES, MODEL_HF_PATH
 class ModelArguments:
     model_id: Optional[str] = field(default="llava-1.5-7b")
     model_path: Optional[str] = field(default=None)
-    #lora_path: Optional[str] = field(default=None)
+    # lora_path: Optional[str] = field(default=None)
 
     def __post_init__(self):
         assert self.model_id in MODEL_HF_PATH, f"Unknown model_id: {self.model_id}"
