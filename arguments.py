@@ -27,6 +27,7 @@ class DataArguments:
     eval_data_path: Optional[str] = field(
         default=None, metadata={"help": "Path to the evaluation data json file."}
     )
+    iqa_data: Optional[str] = field(default=None)
     image_folder: Optional[str] = field(default=None)
     video_folder: Optional[str] = field(default=None)
     num_frames: Optional[int] = field(default=8)
@@ -45,6 +46,7 @@ class TrainingArguments(transformers.TrainingArguments):
     use_flash_attn: bool = False
     train_vision_encoder: bool = False
     train_vision_projector: bool = False
+    use_weighted_sample: bool = True
 
     def __post_init__(self):
         super().__post_init__()

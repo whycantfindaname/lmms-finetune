@@ -2,11 +2,12 @@ import json
 import os
 from collections import Counter
 from typing import Dict, List, Optional
-
+from utils import rank0_print
 import av
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
+import torch
 
 TO_LOAD_IMAGE: Dict[str, bool] = {
     "llava-1.5": True,
@@ -39,39 +40,23 @@ def read_video_pyav(container, indices):
     return np.stack([x.to_ndarray(format="rgb24") for x in frames])
 
 
-class LazySupervisedDataset(Dataset):
-    """Dataset for supervised fine-tuning
-    which is generalized enough to handle both images and videos.
-    """
+class IQADataset(Dataset):
 
     def __init__(
         self,
         data_path: str,
         model_family_id: str,
+        iqa_data: str = "qwen_with_bbox_train",
         image_folder: Optional[str] = None,
-        video_folder: Optional[str] = None,
-        num_frames: int = 8,
         user_key: str = "human",
         assistant_key: str = "gpt",
         weights: Optional[dict] = None,
     ) -> None:
-        super(LazySupervisedDataset, self).__init__()
-        self.list_data_dict = []
-        if os.path.isdir(data_path):
-            for file_name in os.listdir(data_path):
-                if file_name.endswith('.json'):
-                    file_path = os.path.join(data_path, file_name)
-                    with open(file_path, 'r', encoding='utf-8') as file:                        
-                        data = json.load(file)
-                        if isinstance(data, list):
-                            self.list_data_dict.extend(data)
-                        else:
-                            self.list_data_dict.append(data)
-        else:
-            self.list_data_dict = json.load(open(data_path, "r"))
+        super(IQADataset, self).__init__()
+        with open(os.path.join(data_path, "{}.json".format(iqa_data))) as f:
+            self.list_data_dict = json.load(f)
         self.image_folder = image_folder
-        self.video_folder = video_folder
-        self.num_frames = num_frames
+
         self.load_image = TO_LOAD_IMAGE[model_family_id]
         self.user_key = user_key
         self.assistant_key = assistant_key
@@ -81,15 +66,47 @@ class LazySupervisedDataset(Dataset):
             for source in self.list_data_dict
         ]
 
-        # level is among [excellent, good, fair, poor, bad, None]."
+        # level is among [excellent, good, fair, poor, bad]."
         try:
             self.data_class = [source["level"] for source in self.list_data_dict]
             self.class_num = Counter(self.data_class).items()
         except Exception:
             pass
 
-        self.weights = weights
+        rank0_print("iqa_data: ", len(self.list_data_dict))
 
+        # 如果提供了自定义权重，直接使用它们，否则计算默认权重
+        if weights is not None:
+            if not isinstance(weights, dict):
+                raise AttributeError("weights should be dict like {'class': weights}")
+
+            self.weights = self._apply_custom_weights(weights)
+        else:
+            self.weights = self._calculate_weights()
+        
+        assert len(self.weights) == len(self.list_data_dict), "Weights length not match"
+
+    def _apply_custom_weights(self, weights: Dict[str, float]):
+        """
+        Directly apply custom weights to each sample based on the provided weights.
+        """
+        weights = [weights[cls] for cls in self.data_class]
+        return torch.DoubleTensor(weights)
+
+    def _calculate_weights(self):
+        """
+        Calculate the weights for each sample based on the class frequency.
+        This method is used only when custom weights are not provided.
+        """
+
+        # 统计每个类别的样本数量
+        class_counts = Counter(self.data_class)
+        # 计算默认的类别权重 (1 / 类别样本数量)
+        class_weights = {cls: 1.0 / count for cls, count in class_counts.items()}
+        # 为每个样本分配权重
+        weights = [class_weights[cls] for cls in self.data_class]
+        return torch.DoubleTensor(weights)
+   
     def __len__(self) -> int:
         return len(self.list_data_dict)
 
@@ -113,35 +130,13 @@ class LazySupervisedDataset(Dataset):
             for image_path in image_sources:
                 if self.image_folder is not None:
                     image_path = os.path.join(self.image_folder, image_path)
+                    assert os.path.exists(image_path), f"{image_path} doesn't exist"
                 images.append(
                     Image.open(image_path).convert("RGB")
                     if self.load_image
                     else image_path
                 )
 
-        videos = []
-        if "video" in source:
-            if isinstance(source["video"], list):
-                video_sources = source["video"]
-            elif isinstance(source["video"], str):
-                video_sources = [source["video"]]
-            else:
-                raise ValueError(f"Invalid video source type: {type(source['video'])}")
-
-            num_frames = [self.num_frames] * len(video_sources)
-
-            for video_path, cur_num_frames in zip(video_sources, num_frames):
-                if self.video_folder is not None:
-                    video_path = os.path.join(self.video_folder, video_path)
-
-                container = av.open(video_path)
-                total_frames = container.streams.video[0].frames
-                indices = np.arange(
-                    0, total_frames, total_frames / cur_num_frames
-                ).astype(int)
-                clip = read_video_pyav(container, indices)
-
-                videos.append(clip)
 
         system_prompt = None
         if "system_prompt" in source:
@@ -158,7 +153,6 @@ class LazySupervisedDataset(Dataset):
 
         return dict(
             images=images,
-            videos=videos,
             conversations=convs,
             system_prompt=system_prompt,
         )

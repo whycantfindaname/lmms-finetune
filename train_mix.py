@@ -1,10 +1,11 @@
 import os
 
-os.environ["WANDB_PROJECT"] = "lmms-ft"
+# os.environ["WANDB_PROJECT"] = "lmms-ft"
 from dataclasses import asdict
 from pathlib import Path
-
-# import debugpy
+import warnings
+warnings.filterwarnings("ignore")
+import debugpy
 import torch
 import transformers
 import yaml
@@ -14,7 +15,8 @@ from transformers import deepspeed
 
 from arguments import DataArguments, LoraArguments, ModelArguments, TrainingArguments
 from collators import COLLATORS
-from datasets import LazySupervisedDataset
+from mix_datasets import HybridDataset, ValDataset
+from IQAdataset import IQADataset
 from loaders import LOADERS
 from supported_models import MODULE_KEYWORDS
 from utils import (
@@ -25,13 +27,13 @@ from utils import (
     safe_save_model_for_hf_trainer,
 )
 
-# try:
-#     # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
-#     debugpy.listen(("localhost", 9501))
-#     print("Waiting for debugger attach")
-#     debugpy.wait_for_client()
-# except Exception:
-#     pass
+try:
+    # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
+    debugpy.listen(("localhost", 9501))
+    print("Waiting for debugger attach")
+    debugpy.wait_for_client()
+except Exception:
+    pass
 
 
 def train():
@@ -185,40 +187,40 @@ def train():
         model = get_peft_model(model, lora_config)
 
     # print trainable parameters for inspection
-    rank0_print("Trainable parameters:")
-    for name, param in model.named_parameters():
-        if param.requires_grad:
-            rank0_print(f"\t{name}")
+    # rank0_print("Trainable parameters:")
+    # for name, param in model.named_parameters():
+    #     if param.requires_grad:
+    #         rank0_print(f"\t{name}")
 
     # load data
     if training_args.use_weighted_sample:
-        weights = {"bad": 5, "poor": 1, "fair": 10, "good": 40, "excellent": 80, "None": 0.01}
+        train_weights = {"bad": 5, "poor": 1, "fair": 3, "good": 25, "excellent": 100, "None": 0.05}
+        eval_weights = {"bad": 5, "poor": 1, "fair": 3, "good": 25, "excellent": 100}
     else:
-        weights = None
+        train_weights = None
+    # train_weights = None
     rank0_print("Loading data...")
-    train_dataset = LazySupervisedDataset(
+    train_iqa_data = data_args.iqa_data + "_train"
+    train_dataset = IQADataset(
         data_path=data_args.data_path,
+        iqa_data=train_iqa_data,
         image_folder=data_args.image_folder,
-        video_folder=data_args.video_folder,
-        num_frames=data_args.num_frames,
         model_family_id=model_args.model_family_id,
-        user_key=data_args.user_key,
-        assistant_key=data_args.assistant_key,
-        weights=weights,
+        weights=train_weights,
     )
 
     rank0_print("Length of train dataset:", len(train_dataset))
     rank0_print("train data class:", train_dataset.class_num)
     if data_args.eval_data_path:
-        eval_dataset = LazySupervisedDataset(
+        val_iqa_data = data_args.iqa_data + "_val"
+        eval_dataset = ValDataset(
             data_path=data_args.eval_data_path,
+            iqa_data=val_iqa_data,
             image_folder=data_args.image_folder,
-            video_folder=data_args.video_folder,
-            num_frames=data_args.num_frames,
             model_family_id=model_args.model_family_id,
             user_key=data_args.user_key,
             assistant_key=data_args.assistant_key,
-            weights=weights,
+            weights=eval_weights,
         )
         rank0_print("Length of eval dataset:", len(eval_dataset))
         rank0_print("eval data class:", eval_dataset.class_num)
@@ -234,6 +236,8 @@ def train():
 
     # trainer
     rank0_print(f"Use weighted sampler:{training_args.use_weighted_sample}")
+    rank0_print("train_dataset class weights:", train_weights)
+    rank0_print("eval_dataset class weights:", eval_weights)
     if training_args.use_weighted_sample:
         trainer = TrainerWithWeightedSampler(
             model=model,
@@ -250,7 +254,7 @@ def train():
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
         )
-    trainer.train()
+    trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
     trainer.save_state()
 
     safe_save_model_for_hf_trainer(trainer=trainer, output_dir=output_dir)
