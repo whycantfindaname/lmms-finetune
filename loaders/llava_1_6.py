@@ -1,16 +1,16 @@
 from typing import Tuple
 
-from transformers import AutoProcessor, LlavaForConditionalGeneration, PreTrainedTokenizer
+from transformers import AutoProcessor, LlavaNextForConditionalGeneration, PreTrainedTokenizer
 
 from . import register_loader
 from .base import BaseModelLoader
 
 
-@register_loader("llava-1.5")
-class LLaVA15ModelLoader(BaseModelLoader):
-    def load(self, load_model: bool = True) -> Tuple[LlavaForConditionalGeneration, PreTrainedTokenizer, AutoProcessor]:
+@register_loader("llava-1.6")
+class LLaVA16ModelLoader(BaseModelLoader):
+    def load(self, load_model: bool = True) -> Tuple[LlavaNextForConditionalGeneration, PreTrainedTokenizer, AutoProcessor]:
         if load_model:
-            model = LlavaForConditionalGeneration.from_pretrained(
+            model = LlavaNextForConditionalGeneration.from_pretrained(
                 self.model_local_path, 
                 **self.loading_kwargs,
             )

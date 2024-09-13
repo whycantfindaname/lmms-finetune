@@ -13,7 +13,7 @@ More and more large multimodal models (LMMs) are being released from time to tim
 
 
 The codebase is quite flexible. Despite being at an early stage, it already supports the finetuning of various types of LMMs, including:
-- :city_sunrise: single image models: [LLaVA-1.5](https://huggingface.co/collections/llava-hf/llava-15-65f762d5b6941db5c2ba07e0), [Phi-3-Vision](https://huggingface.co/microsoft/Phi-3-vision-128k-instruct)
+- :city_sunrise: single image models: [LLaVA-1.5](https://huggingface.co/collections/llava-hf/llava-15-65f762d5b6941db5c2ba07e0), [LLaVA-1.6/NeXT](https://huggingface.co/collections/llava-hf/llava-next-65f75c4afac77fd37dbbe6cf), [Phi-3-Vision](https://huggingface.co/microsoft/Phi-3-vision-128k-instruct)
 - :bookmark_tabs: multiple/interleaved image models: [Qwen-VL-Chat](https://huggingface.co/Qwen/Qwen-VL-Chat), [LLaVA-NeXT-Interleave](https://huggingface.co/collections/llava-hf/llava-interleave-668e19a97da0036aad4a2f19)
 - :movie_camera: video models: [LLaVA-NeXT-Video](https://huggingface.co/collections/llava-hf/llava-next-video-6666a9173a64c7052930f153)
 
@@ -22,7 +22,7 @@ See [supported_models.md](docs/supported_models.md) for the full list of support
 *TODOS:* 
 - [x] Support training with text-only data.
 - [x] Support tuning vision models and projectors.
-- [ ] Add more models, including llava-1.6/next, idefics2, glm4-v, minicpm, etc.
+- [ ] Add more models, including llava-onvision, idefics2, glm4-v, minicpm, etc.
 
 :raising_hand: If you would like to have a model available, feel free to open an issue.
 
@@ -34,6 +34,7 @@ These are great projects/frameworks with large scale and high-degree optimizatio
 
 ## News
 
+- **2024/08/28**: Finetuning with gradio webui interface is supported. Try `python webui.py`.
 - **2024/07/30**: Finetuning of vision encoder and projector is now supported.
 - **2024/07/25**: Several things are improved. We have *1)* released a [colab notebook](https://colab.research.google.com/drive/139XypY8_wdLgyLXYE_Zve7Hjd809fVpK?usp=sharing) demonstrating a full, successful training run with LLaVA-NeXT-Video-7B (happy to hear from people that they succeeded in [their cases](https://github.com/zjysteven/lmms-finetune/issues/7#issuecomment-2249864887) too); *2)* supported having text-only samples in the training set (see [this](docs/dataset.md) for one note).
 - **2024/07/20**: Initial release of the codebase. More models and optimizations are coming soon. Stay tuned!
@@ -63,7 +64,7 @@ A workable example training run (of LLaVA-NeXT-Video-7B) is showcased in this [c
 <details>
 <summary><b>0. See if the model you want to finetune is supported</b></summary>
 
-Browse [supported_models.md](docs/supported_models.md). Or run `python supported_models.py`, which will show things like
+Browse [supported_models.md](docs/supported_models.md). Or run `python supported_models.py`, which will for example show things like
 ```
 Supported models:
   Model ID                      : HuggingFace Path
@@ -115,6 +116,8 @@ Besides this json file, the actual videos and images are by default assumed to b
 <summary><b>2. Perform finetuning</b></summary>
 
 Modify the sample training bash script, [example_video.sh](./example_scripts/example_video.sh) or [example_image.sh](example_image.sh) (there are no differences other than different model ID and dataset filepath), to specify arguments including the target model, data path, etc. There are comments that explain each argument's meaning. Then simply kick off the training by running the bash script `bash example_scripts/example_video.sh` or `bash example_scripts/example_image.sh`. Note that to exactly run the provided [example_video.sh](./example_scripts/example_video.sh), you will need to download the video clips from ShareGPT4Video; see [here](example_data/videos/ego4d/README.md) for instructions.
+
+:chart_with_upwards_trend:*If you prefer graphical interface*, simply run `python webui.py` to lauch the gradio interface for finetuning.
 </details>
 
 
