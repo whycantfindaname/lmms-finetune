@@ -108,7 +108,8 @@ class IQADataset(Dataset):
         return torch.DoubleTensor(weights)
    
     def __len__(self) -> int:
-        return len(self.list_data_dict)
+        return 1
+    # len(self.list_data_dict)
 
     def __getitem__(self, i) -> Dict[str, List]:
         source = self.list_data_dict[i]

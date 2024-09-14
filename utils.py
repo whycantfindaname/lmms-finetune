@@ -109,6 +109,7 @@ class WeightedBatchSampler(Sampler):
         batch_size: int,
         world_size: int,
         dataset: torch.utils.data.Dataset,
+        sample_weight_decay: Optional[float] = None,
         generator=None,
     ):
 
@@ -125,20 +126,21 @@ class WeightedBatchSampler(Sampler):
         self.mega_batch_size = batch_size * world_size
         self.data_class = dataset.data_class
         self.weights = dataset.weights
+        self.sample_weight_decay = sample_weight_decay  
 
         assert len(self.data_class) == len(self.weights), "Data class and weights must have the same length."
 
     def __len__(self):
-        return 1
-    # len(self.data_class) // self.mega_batch_size
+        return len(self.data_class) 
 
     def __iter__(self):
-        # 使用加权随机采样生成样本索引
+
         weighted_indices = torch.multinomial(
             self.weights, len(self.weights), replacement=True, generator=self.generator
         )
-        self.weights[weighted_indices] *= 0.9
-        # 将加权索引划分为mega batch
+        if self.sample_weight_decay is not None:
+            self.weights[weighted_indices] *= self.sample_weight_decay
+
         num_batches = len(weighted_indices) // self.mega_batch_size
         mega_batches = [
             weighted_indices[
@@ -147,13 +149,11 @@ class WeightedBatchSampler(Sampler):
             for i in range(num_batches)
         ]
 
-        # 如果剩余的样本不满一个mega batch，也作为一个批次
         if len(weighted_indices) % self.mega_batch_size != 0:
             mega_batches.append(
                 weighted_indices[num_batches * self.mega_batch_size :].tolist()
             )
 
-        # 展平mega_batches列表成为最终的样本索引序列
         indices = [i for mega_batch in mega_batches for i in mega_batch]
         iqa_indices = [i for i in indices if self.data_class[i] != "None"]
         unique_indices = list(set(indices))
@@ -161,10 +161,15 @@ class WeightedBatchSampler(Sampler):
         iqa_unique_indices = list(set(iqa_indices))
         use_data_class = Counter(sampled_class).items()  
         
-        rank0_print("Data class sampled in one epoch:", use_data_class)
-        rank0_print("Number of unique data used in one epoch:", len(unique_indices))
+        rank0_print("Data class sampled in this epoch:", use_data_class)
+        rank0_print("Number of unique data used in this epoch:", len(unique_indices))
+        # rank0_print(self.weights[0:20])
         # rank0_print("Number of unique iqa data used in one epoch:", len(iqa_unique_indices))
+        
         return iter(indices)
+        # length of iter_indices should match __len__ method return value
+        # for correctly counting the number of epochs in huggingface trainer.
+        # and correctly print the sampled data class distribution in each epoch.
 
 
 class TrainerWithCustomSampler(Trainer):
@@ -199,12 +204,14 @@ class TrainerWithWeightedSampler(Trainer):
         if self.train_dataset is None or not has_length(self.train_dataset):
             return None
 
+        sample_weight_decay = self.args.sample_weight_decay
         iter_indices = WeightedBatchSampler(
             self.args.train_batch_size,
             world_size=self.args.world_size * self.args.gradient_accumulation_steps,
             dataset=self.train_dataset,
+            sample_weight_decay=sample_weight_decay,
         )
-        rank0_print(list(iter_indices))
+        # rank0_print(list(iter_indices))
         return iter_indices
 
     def _get_eval_sampler(
@@ -216,8 +223,9 @@ class TrainerWithWeightedSampler(Trainer):
             world_size=self.args.world_size,
             is_text_only=is_text_only,
         )
-        rank0_print(list(iter_indices))
+        # rank0_print(list(iter_indices))
         return iter_indices
+
     
     # def _get_eval_sampler(
     #     self, eval_dataset: torch.utils.data.Dataset

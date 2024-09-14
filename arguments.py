@@ -8,9 +8,8 @@ from supported_models import MODEL_FAMILIES, MODEL_HF_PATH
 
 @dataclass
 class ModelArguments:
-    model_id: Optional[str] = field(default="llava-1.5-7b")
-    model_path: Optional[str] = field(default=None)
-    # lora_path: Optional[str] = field(default=None)
+    model_id: Optional[str] = field(default="qwen-vl-chat")
+    model_path: Optional[str] = field(default='models/Qwen-VL-Chat')
 
     def __post_init__(self):
         assert self.model_id in MODEL_HF_PATH, f"Unknown model_id: {self.model_id}"
@@ -47,6 +46,7 @@ class TrainingArguments(transformers.TrainingArguments):
     train_vision_encoder: bool = False
     train_vision_projector: bool = False
     use_weighted_sample: bool = True
+    sample_weight_decay: float = None
 
     def __post_init__(self):
         super().__post_init__()

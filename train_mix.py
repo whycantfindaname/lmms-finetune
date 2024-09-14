@@ -27,13 +27,13 @@ from utils import (
     safe_save_model_for_hf_trainer,
 )
 
-try:
-    # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
-    debugpy.listen(("localhost", 9501))
-    print("Waiting for debugger attach")
-    debugpy.wait_for_client()
-except Exception:
-    pass
+# try:
+#     # 5678 is the default attach port in the VS Code debug configurations. Unless a host and port are specified, host defaults to 127.0.0.1
+#     debugpy.listen(("localhost", 9501))
+#     print("Waiting for debugger attach")
+#     debugpy.wait_for_client()
+# except Exception:
+#     pass
 
 
 def train():
@@ -194,11 +194,10 @@ def train():
 
     # load data
     if training_args.use_weighted_sample:
-        train_weights = {"bad": 5, "poor": 1, "fair": 3, "good": 25, "excellent": 100, "None": 0.05}
-        eval_weights = {"bad": 5, "poor": 1, "fair": 3, "good": 25, "excellent": 100}
+        train_weights = {"bad": 10, "poor": 1, "fair": 8, "good": 50, "excellent": 1000, "None": 0.05}
     else:
         train_weights = None
-    # train_weights = None
+    train_weights = None
     rank0_print("Loading data...")
     train_iqa_data = data_args.iqa_data + "_train"
     train_dataset = IQADataset(
@@ -220,7 +219,6 @@ def train():
             model_family_id=model_args.model_family_id,
             user_key=data_args.user_key,
             assistant_key=data_args.assistant_key,
-            weights=eval_weights,
         )
         rank0_print("Length of eval dataset:", len(eval_dataset))
         rank0_print("eval data class:", eval_dataset.class_num)
@@ -237,7 +235,6 @@ def train():
     # trainer
     rank0_print(f"Use weighted sampler:{training_args.use_weighted_sample}")
     rank0_print("train_dataset class weights:", train_weights)
-    rank0_print("eval_dataset class weights:", eval_weights)
     if training_args.use_weighted_sample:
         trainer = TrainerWithWeightedSampler(
             model=model,
