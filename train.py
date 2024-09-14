@@ -4,7 +4,6 @@ os.environ["WANDB_PROJECT"] = "lmms-ft"
 from dataclasses import asdict
 from pathlib import Path
 
-# import debugpy
 import torch
 import transformers
 import yaml
@@ -18,8 +17,8 @@ from datasets import LazySupervisedDataset
 from loaders import LOADERS
 from supported_models import MODULE_KEYWORDS
 from utils import (
-    TrainerWithCustomSampler,
     TrainerWithWeightedSampler,
+    TrainerWithCustomSampler,
     find_all_linear_names,
     rank0_print,
     safe_save_model_for_hf_trainer,
@@ -86,24 +85,14 @@ def train():
 
     # load model, tokenizer, processor
     rank0_print("Loading model, tokenizer, processor...")
-    if model_args.model_path is None:
-        loader = LOADERS[model_args.model_family_id](
-            model_path=model_args.model_name_or_path,
-            compute_dtype=compute_dtype,
-            bnb_config=bnb_config,
-            use_flash_attn=training_args.use_flash_attn,
-            device_map=device_map,
-        )
-        # print(model_args.model_name_or_path)
-    else:
-        loader = LOADERS[model_args.model_family_id](
-            model_path=model_args.model_path,
-            compute_dtype=compute_dtype,
-            bnb_config=bnb_config,
-            use_flash_attn=training_args.use_flash_attn,
-            device_map=device_map,
-        )
-    # print(loader)
+    loader = LOADERS[model_args.model_family_id](
+        model_hf_path=model_args.model_hf_path,
+        model_local_path=model_args.model_local_path,
+        compute_dtype=compute_dtype,
+        bnb_config=bnb_config,
+        use_flash_attn=training_args.use_flash_attn,
+        device_map=device_map,
+    )
     model, tokenizer, processor = loader.load()
     tokenizer.model_max_length = training_args.model_max_length
 
@@ -204,7 +193,6 @@ def train():
         model_family_id=model_args.model_family_id,
         user_key=data_args.user_key,
         assistant_key=data_args.assistant_key,
-        weights=weights,
     )
 
     rank0_print("Length of train dataset:", len(train_dataset))
@@ -218,7 +206,6 @@ def train():
             model_family_id=model_args.model_family_id,
             user_key=data_args.user_key,
             assistant_key=data_args.assistant_key,
-            weights=weights,
         )
         rank0_print("Length of eval dataset:", len(eval_dataset))
         rank0_print("eval data class:", eval_dataset.class_num)
