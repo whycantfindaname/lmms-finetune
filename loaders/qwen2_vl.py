@@ -11,13 +11,13 @@ class Qwen2VLModelLoader(BaseModelLoader):
     def load(self, load_model: bool = True) -> Tuple[Qwen2VLForConditionalGeneration, PreTrainedTokenizer, AutoProcessor]:
         if load_model:
             model = Qwen2VLForConditionalGeneration.from_pretrained(
-                self.model_hf_path, 
+                self.model_path, 
                 **self.loading_kwargs,
             )
             model.config.hidden_size = model.config.hidden_size # useful for deepspeed
         else:
             model = None
 
-        processor = AutoProcessor.from_pretrained(self.model_hf_path)
+        processor = AutoProcessor.from_pretrained(self.model_path)
         tokenizer = processor.tokenizer        
         return model, tokenizer, processor
