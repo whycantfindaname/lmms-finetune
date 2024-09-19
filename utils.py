@@ -116,8 +116,7 @@ class WeightedBatchSampler(Sampler):
         assert len(self.data_class) == len(self.weights), "Data class and weights must have the same length."
 
     def __len__(self):
-        return 2
-    #len(self.data_class) 
+        return len(self.data_class) 
 
     def __iter__(self):
         # Step 1: Generate weighted indices with replacement
@@ -163,7 +162,7 @@ class WeightedBatchSampler(Sampler):
 
         for batch_idx, mega_batch in enumerate(mega_batches[0:5]):
             rank0_print(f"Mega Batch {batch_idx + 1}: {mega_batch}")
-        return iter(indices[0:2])
+        return iter(indices)
         # length of iter_indices should match __len__ method return value
         # for correctly counting the number of epochs in huggingface trainer.
         # and correctly print the sampled data class distribution in each epoch.

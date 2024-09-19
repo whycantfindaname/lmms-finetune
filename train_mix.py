@@ -110,7 +110,6 @@ def train():
     # print(loader)
     model, tokenizer, processor = loader.load()
     tokenizer.model_max_length = training_args.model_max_length
-    rank0_print(model.config)
 
     if training_args.gradient_checkpointing:
         model.enable_input_require_grads()
