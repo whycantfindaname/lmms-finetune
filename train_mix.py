@@ -25,6 +25,8 @@ from utils import (
     find_all_linear_names,
     rank0_print,
     safe_save_model_for_hf_trainer,
+    get_peft_state_maybe_zero_3,
+    get_peft_state_non_lora_maybe_zero_3
 )
 
 # try:
@@ -108,6 +110,7 @@ def train():
     # print(loader)
     model, tokenizer, processor = loader.load()
     tokenizer.model_max_length = training_args.model_max_length
+    rank0_print(model.config)
 
     if training_args.gradient_checkpointing:
         model.enable_input_require_grads()
@@ -154,9 +157,13 @@ def train():
             lora_modules.extend(
                 find_all_linear_names(named_modules, vision_encoder_keys)
             )
+            model.config.freeze_vision_encoder = False
+            model.config.use_vision_lora = True
         elif training_args.train_vision_encoder:
             rank0_print("Vision encoder will be fully trained...")
             full_modules.extend(vision_encoder_keys)
+            model.config.freeze_vision_encoder = False
+            model.config.use_vision_lora = False
 
         if lora_args.use_lora:
             rank0_print("LoRA for LLM enabled...")
@@ -184,13 +191,16 @@ def train():
                 model, use_gradient_checkpointing=training_args.gradient_checkpointing
             )
 
+        rank0_print("Adding LoRA adapters...")
         model = get_peft_model(model, lora_config)
+        # model.config.visual_abstractor_lr = training_args.visual_abstractor_lr
 
     # print trainable parameters for inspection
-    # rank0_print("Trainable parameters:")
-    # for name, param in model.named_parameters():
-    #     if param.requires_grad:
-    #         rank0_print(f"\t{name}")
+    rank0_print("Trainable parameters:")
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            rank0_print(f"\t{name}")
+    model.print_trainable_parameters()
 
     # load data
     if training_args.use_weighted_sample:
@@ -254,7 +264,26 @@ def train():
     trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
     trainer.save_state()
 
-    safe_save_model_for_hf_trainer(trainer=trainer, output_dir=output_dir)
+    if lora_args.use_lora:
+        state_dict = get_peft_state_maybe_zero_3(
+            model.named_parameters(), lora_args.lora_bias
+        )
+        non_lora_state_dict = get_peft_state_non_lora_maybe_zero_3(
+            model.named_parameters()
+        )
+        if training_args.local_rank == 0 or training_args.local_rank == -1:
+            model.config.save_pretrained(output_dir)
+            model.save_pretrained(output_dir, state_dict=state_dict)
+            torch.save(
+                non_lora_state_dict,
+                os.path.join(output_dir, "non_lora_trainables.bin"),
+            )
+    else:
+        safe_save_model_for_hf_trainer(
+            trainer=trainer,
+            output_dir=training_args.output_dir,
+        )
+
 
 
 if __name__ == "__main__":

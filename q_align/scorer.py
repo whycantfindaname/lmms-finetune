@@ -353,3 +353,4 @@ class QwenScorer(nn.Module):
             return torch.tensor(1.8, device=self.device) + weight * weighted_sum
         if max_indices == 4:
             return torch.tensor(1, device=self.device) + weight * weighted_sum
+

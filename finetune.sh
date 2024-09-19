@@ -10,7 +10,7 @@
 
 eval "$(conda shell.bash hook)"
 conda activate lmms-finetune
-NUM_GPUS=8
+NUM_GPUS=1
 DISTRIBUTED_ARGS="
     --nnodes=1 \
     --nproc_per_node ${NUM_GPUS} \

@@ -16,8 +16,8 @@ TO_LOAD_IMAGE: Dict[str, bool] = {
     "llava-next-video": True,
     "qwen-vl": False,
     "phi3-v": True,
+    "qwen2-vl": True,
 }
-
 
 def read_video_pyav(container, indices):
     """
@@ -68,7 +68,7 @@ class IQADataset(Dataset):
 
         # level is among [excellent, good, fair, poor, bad]."
         try:
-            self.data_class = [source["level"] for source in self.list_data_dict]
+            self.data_class = [source.get("quality", source.get("level")) for source in self.list_data_dict]
             self.class_num = Counter(self.data_class).items()
         except Exception:
             pass

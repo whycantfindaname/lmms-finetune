@@ -34,7 +34,6 @@ executing==2.0.1
 facexlib==0.3.0
 filelock==3.15.4
 filterpy==1.4.5
-flash-attn @ file:///home/liaowenjie/%E6%A1%8C%E9%9D%A2/%E7%94%BB%E8%B4%A8%E5%A4%A7%E6%A8%A1%E5%9E%8B/flash_attn-2.5.9.post1%2Bcu122torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl#sha256=d9f38b3e4527a96ff11a2362f12c66e362f003f45c00d6d35af71914ebb1b7fa
 fonttools==4.53.1
 frozenlist==1.4.1
 fsspec==2024.6.1
@@ -103,8 +102,8 @@ protobuf==5.27.2
 psutil==6.0.0
 py-cpuinfo==9.0.0
 pyarrow==16.1.0
-pydantic==2.8.2
-pydantic_core==2.20.1
+pydantic==2.9.1
+pydantic_core==2.23.3
 Pygments==2.18.0
 pyparsing==3.1.2
 python-dateutil==2.9.0.post0

@@ -23,6 +23,7 @@ TO_LOAD_IMAGE: Dict[str, bool] = {
     "llava-next-video": True,
     "qwen-vl": False,
     "phi3-v": True,
+    "qwen2-vl": True,
 }
 
 

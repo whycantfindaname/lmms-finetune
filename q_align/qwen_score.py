@@ -4,7 +4,7 @@ import os
 from scorer import QwenScorer
 
 # setup_debugger()
-file = "../gen_prompt/dataset/clean_data_v0/qwen_single/qwen_with_bbox.json"
+file = "../datasets/val_json/qwen_with_bbox_val.json"
 
 # 读取JSON文件
 with open(file, "r", encoding="utf-8") as file:
@@ -12,15 +12,18 @@ with open(file, "r", encoding="utf-8") as file:
 image_dir = "../datasets/images"
 img_list = []
 bbox_list = []
+save_path = "results/mos/qwen/qwen_bbox_sample2_score_val.json"
+os.makedirs(os.path.dirname(save_path), exist_ok=True)
 for i in range(len(data)):
     image = data[i]["image"]
+    if os.path.dirname(image) != "QualityLLM_single_2w":
+        continue
     img_list.append(os.path.join(image_dir, image))
     bbox_list.append(data[i]["conversations"][7]["value"])
-save_path = "results/mos/qwen/qwen_bbox_score_with_bbox_all.json"
-os.makedirs(os.path.dirname(save_path), exist_ok=True)
+print(bbox_list[0])
 model_base = "models/Qwen-VL-Chat"
-model_path = "checkpoints/qwen-vl-chat_lora-True_qlora-False-bbox-8k-vqa/checkpoint-1260"
-model_name = 'qwen-vl-chat_lora-True_qlora-False-bbox-8k-vqa'
+model_path = "checkpoints/qwen-vl-chat_lora-True_qlora-False-bbox-8k-sample2"
+model_name = 'qwen-vl-chat_lora-True_qlora-False-bbox-8k'
 levels = [
     " excellent",
     " good",
@@ -36,7 +39,7 @@ levels = [
     " medium",
     " acceptable",
 ]
-device = "cuda:1"
+device = "cuda:0"
 scorer = QwenScorer(model_path, model_base, device, levels, model_name)
 
 

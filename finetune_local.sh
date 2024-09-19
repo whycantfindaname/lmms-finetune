@@ -10,7 +10,7 @@
 
 eval "$(conda shell.bash hook)"
 conda activate lmms-finetune
-NUM_GPUS=8
+NUM_GPUS=2
 DISTRIBUTED_ARGS="
     --nnodes=1 \
     --nproc_per_node ${NUM_GPUS} \
@@ -20,6 +20,8 @@ DISTRIBUTED_ARGS="
 
 # arguments that are very likely to be changed
 # according to your own case
+# MODEL_ID=qwen2-vl-7b-instruct # model id; pick on by running `python supported_models.py`
+# MODEL_PATH=./models/Qwen2-VL-7B   # model path; if None, will download the model from huggingface
 MODEL_ID=qwen-vl-chat # model id; pick on by running `python supported_models.py`
 MODEL_PATH=./models/Qwen-VL-Chat   # model path; if None, will download the model from huggingface
 
@@ -32,7 +34,7 @@ USE_VISION_LORA=False                                   # whether use lora for v
 TRAIN_VISION_PROJECTOR=True                            # whether train the vision projector (only full finetuning is supported)
 IQA_DATA=qwen_with_bbox
 
-USE_WEIGHTED_SAMPLE=True
+USE_WEIGHTED_SAMPLE=True                                # whether use weighted sample for training
 SAMPLE_WEIGHT_DECAY=0.7
 
 USE_LORA=True                                           # whether use lora for llm
@@ -42,10 +44,10 @@ LORA_ALPHA=16                                           # the lora alpha (both l
 
 RUN_ID=${MODEL_ID}_lora-${USE_LORA}_qlora-${Q_LORA}-test     # a custom run id that determines the checkpoint folder and wandb run name
 
-DS_STAGE=zero2                                          # deepspeed stage; < zero2 | zero3 >
-PER_DEVICE_BATCH_SIZE=8                                 # batch size per GPU
-GRAD_ACCUM=10                                            # gradient accumulation steps
-NUM_EPOCHS=20                                            # number of training epochs
+DS_STAGE=zero3                                          # deepspeed stage; < zero2 | zero3 >
+PER_DEVICE_BATCH_SIZE=2                                 # batch size per GPU
+GRAD_ACCUM=1                                            # gradient accumulation steps
+NUM_EPOCHS=1                                            # number of training epochs
 
 LR=5e-4                                                 # learning rate
 MODEL_MAX_LEN=2048                                       # maximum input length of the model
@@ -55,11 +57,10 @@ CKPT_PATH=checkpoints/qwen-vl-chat_lora-True_qlora-False-bbox-8k-vqa/checkpoint-
 # your training settings must be the same as the previous run to resume from the same checkpoint
 # for example, your batch size, world size, ds_stage must be the same as the previous run
 
-srun torchrun $DISTRIBUTED_ARGS train_mix.py \
+torchrun $DISTRIBUTED_ARGS train_mix.py \
     --model_id $MODEL_ID \
     --model_path $MODEL_PATH \
     --data_path $TRAIN_DATA_PATH \
-    --eval_data_path $EVAL_DATA_PATH \
     --image_folder $IMAGE_FOLDER \
     --output_dir ./checkpoints/$RUN_ID \
     --report_to wandb \
@@ -91,7 +92,6 @@ srun torchrun $DISTRIBUTED_ARGS train_mix.py \
     --q_lora $Q_LORA \
     --lora_r $LORA_R \
     --lora_alpha $LORA_ALPHA \
-    --use_weighted_sample $USE_WEIGHTED_SAMPLE \
     --iqa_data $IQA_DATA \
-    --sample_weight_decay $SAMPLE_WEIGHT_DECAY 
+    --use_weighted_sample $USE_WEIGHTED_SAMPLE \
     

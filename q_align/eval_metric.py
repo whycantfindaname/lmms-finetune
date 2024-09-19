@@ -26,9 +26,9 @@ if __name__ == "__main__":
             pred_item = next(
                 item for item in pred if item["filename"] == gt_item["image"]
             )
-            pred_mos.append(pred_item["pred_mos"])
+            pred_mos.append(pred_item["pred_mos"]["pred_mos"])
     else:
-        pred_mos = [item["pred_mos"] for item in pred]
+        pred_mos = [item["pred_mos"]["pred_mos"] for item in pred]
         gt_mos = []
         for pred_item in pred:
             try:
