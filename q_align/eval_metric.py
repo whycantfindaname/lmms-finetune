@@ -28,7 +28,10 @@ if __name__ == "__main__":
             )
             pred_mos.append(pred_item["pred_mos"]["pred_mos"])
     else:
-        pred_mos = [item["pred_mos"]["pred_mos"] for item in pred]
+        try:
+            pred_mos = [item["pred_mos"] for item in pred]
+        except:
+            pred_mos = [item["pred_mos"]["pred_mos"] for item in pred]
         gt_mos = []
         for pred_item in pred:
             try:

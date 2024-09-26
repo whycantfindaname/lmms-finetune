@@ -169,7 +169,7 @@ class QwenQAlignScorer(nn.Module):
         ]
         self.weight_tensor = torch.Tensor([5, 4, 3, 2, 1]).half().to(model.device)
 
-    def forward(self, image_path: List[str], temperature=1, bbox_list=None, dist_list=None):
+    def forward(self, image_path: List[str], temperature=1, sys_prompt: str = "You are an expert in image quality assessment. Your task is to evaluate the quality of an image.", bbox_list=None, dist_list=None):
         """
         Rates the quality of a list of input images, returning a score for each image between 1 and 5.
 
@@ -184,22 +184,22 @@ class QwenQAlignScorer(nn.Module):
         prompts = []
         if bbox_list:
             prompts = [
-                f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{bbox}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{bbox}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                 for path, bbox in zip(image_path, bbox_list)
             ]
         elif dist_list:
             for path, dist in zip(image_path, dist_list):
                 if "no distortion" in dist:
                     prompts.append(
-                        f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{dist}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                        f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{dist}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                     )
                 else:
                     prompts.append(
-                        f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nThe image contains one or more distortions as follows: {dist} Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                        f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nThe image contains one or more distortions as follows: {dist} Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                     )
         else:
             prompts = [
-                f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nCan you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nCan you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                 for path in image_path
             ]
 
@@ -207,6 +207,7 @@ class QwenQAlignScorer(nn.Module):
         with torch.inference_mode():
             output_logits = []
             cal_logits = []
+            print(prompts[0])
             for prompt, path in tqdm(zip(prompts, image_path), total=len(prompts)):
                 logit = self.model.forward_for_score(self.tokenizer, query=prompt)
                 output_logit = (
@@ -276,7 +277,7 @@ class QwenScorer(nn.Module):
             torch.Tensor([1, 0.75, 0.5, 0.25, 0]).half().to(model.device)
         )
 
-    def forward(self, image_path: List[str], temperature=1, bbox_list=None, dist_list=None):
+    def forward(self, image_path: List[str], temperature=1, sys_prompt: str = "You are an expert in image quality assessment. Your task is to evaluate the quality of an image." ,bbox_list=None, dist_list=None):
         """
         Rates the quality of a list of input images, returning a score for each image between 1 and 5.
 
@@ -291,22 +292,22 @@ class QwenScorer(nn.Module):
         prompts = []
         if bbox_list:
             prompts = [
-                f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{bbox}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{bbox}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                 for path, bbox in zip(image_path, bbox_list)
             ]
         elif dist_list:
             for path, dist in zip(image_path, dist_list):
                 if "no distortion" in dist:
                     prompts.append(
-                        f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{dist}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                        f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\n{dist}Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                     )
                 else:
                     prompts.append(
-                        f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nThe image contains one or more distortions as follows: {dist} Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                        f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nThe image contains one or more distortions as follows: {dist} Accordingly, can you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                     )
         else:
             prompts = [
-                f"<|im_start|>system\nYou are an expert in image quality assessment. Your task is to evaluate the quality of an image.<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nCan you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
+                f"<|im_start|>system\n{sys_prompt}<|im_end|>\n<|im_start|>user\nPicture: <img>{path}</img>\nCan you evaluate the quality of the image in a single sentence?<|im_end|>\n<|im_start|>assistant\nThe quality of the image is"
                 for path in image_path
             ]
 

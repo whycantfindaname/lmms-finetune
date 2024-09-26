@@ -194,8 +194,6 @@ def train():
         assistant_key=data_args.assistant_key,
     )
 
-    rank0_print("Length of train dataset:", len(train_dataset))
-    rank0_print("train data class:", train_dataset.class_num)
     if data_args.eval_data_path:
         eval_dataset = LazySupervisedDataset(
             data_path=data_args.eval_data_path,
@@ -206,8 +204,6 @@ def train():
             user_key=data_args.user_key,
             assistant_key=data_args.assistant_key,
         )
-        rank0_print("Length of eval dataset:", len(eval_dataset))
-        rank0_print("eval data class:", eval_dataset.class_num)
     else:
         eval_dataset = None
         training_args.eval_strategy = "no"

@@ -23,7 +23,7 @@ DISTRIBUTED_ARGS="
 # MODEL_ID=qwen2-vl-7b-instruct # model id; pick on by running `python supported_models.py`
 # MODEL_PATH=./models/Qwen2-VL-7B   # model path; if None, will download the model from huggingface
 MODEL_ID=qwen-vl-chat # model id; pick on by running `python supported_models.py`
-MODEL_PATH=./models/Qwen-VL-Chat   # model path; if None, will download the model from huggingface
+MODEL_PATH=models/qwenvl_iqa_stage1_full   # model path; if None, will download the model from huggingface
 
 TRAIN_DATA_PATH=../datasets/train_json # path to the training data json file
 EVAL_DATA_PATH=../datasets/val_json # path to the evaluation data json file (optional)

@@ -21,11 +21,11 @@ DISTRIBUTED_ARGS="
 # arguments that are very likely to be changed
 # according to your own case
 MODEL_ID=qwen-vl-chat # model id; pick on by running `python supported_models.py`
-MODEL_PATH=Qwen-VL-IQA-stage1  # model path; if None, will download the model from huggingface
+MODEL_PATH=models/qwenvl_iqa_stage1_full  # model path; if None, will download the model from huggingface
 
 TRAIN_DATA_PATH=datasets/train_json # path to the training data json file
 EVAL_DATA_PATH=datasets/val_json # path to the evaluation data json file (optional)
-IMAGE_FOLDER=datasets/images             # path to the image root folder; if provided, the image paths in the json should be relative
+IMAGE_FOLDER=../datasets/images             # path to the image root folder; if provided, the image paths in the json should be relative
 
 TRAIN_VISION_ENCODER=False                              # whether train the vision encoder
 USE_VISION_LORA=False                                   # whether use lora for vision encoder (only effective when `TRAIN_VISION_ENCODER` is True)
@@ -43,7 +43,7 @@ LORA_ALPHA=16                                           # the lora alpha (both l
 RUN_ID=${MODEL_ID}_lora-${USE_LORA}_qlora-${Q_LORA}-stage2     # a custom run id that determines the checkpoint folder and wandb run name
 
 DS_STAGE=zero2                                          # deepspeed stage; < zero2 | zero3 >
-PER_DEVICE_BATCH_SIZE=8                                 # batch size per GPU
+PER_DEVICE_BATCH_SIZE=4                                 # batch size per GPU
 GRAD_ACCUM=10                                            # gradient accumulation steps
 NUM_EPOCHS=20                                            # number of training epochs
 

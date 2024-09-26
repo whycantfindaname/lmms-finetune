@@ -173,18 +173,18 @@ register_model(
     model_hf_path="microsoft/Phi-3-vision-128k-instruct",
 )
 
-# # qwen2-vl ---------------------------------------------------
-# register_model(
-#     model_id="qwen2-vl-2b-instruct",
-#     model_family_id="qwen2-vl",
-#     model_hf_path="Qwen/Qwen2-VL-2B-Instruct"
-# )
+# qwen2-vl ---------------------------------------------------
+register_model(
+    model_id="qwen2-vl-2b-instruct",
+    model_family_id="qwen2-vl",
+    model_hf_path="Qwen/Qwen2-VL-2B-Instruct"
+)
 
-# register_model(
-#     model_id="qwen2-vl-7b-instruct",
-#     model_family_id="qwen2-vl",
-#     model_hf_path="Qwen/Qwen2-VL-7B-Instruct"
-# )
+register_model(
+    model_id="qwen2-vl-7b-instruct",
+    model_family_id="qwen2-vl",
+    model_hf_path="Qwen/Qwen2-VL-7B-Instruct"
+)
 
 #=============================================================
 

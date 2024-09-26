@@ -100,18 +100,36 @@ def load_pretrained_model(
             warnings.warn(
                 "LoRA model specified but no `model_base` provided. Provide `model_base` when loading a LoRA model."
             )
-        if "lora" in model_name.lower() and model_base:
+        elif "lora" in model_name.lower() and model_base:
             tokenizer = AutoTokenizer.from_pretrained(
                 model_base, trust_remote_code=True, use_fast=False
             )
             print(f"Loading finetuned qwen-vl-chat model {model_name}...")
             model = AutoModelForCausalLM.from_pretrained(
+                
                 model_path, low_cpu_mem_usage=True, trust_remote_code=True, **kwargs
             )
+            print("Convert to FP16...")
+            model.to(torch.float16)
+        elif "full" in model_name.lower():
+            print("Loading full finetuned qwen-vl-chat...")
+            try:
+                tokenizer = AutoTokenizer.from_pretrained(
+                model_base, trust_remote_code=True, use_fast=False
+                )
+            except:
+                tokenizer = AutoTokenizer.from_pretrained(
+                    model_path, trust_remote_code=True, use_fast=False
+            )
+            model = AutoModelForCausalLM.from_pretrained(
+                model_path, low_cpu_mem_usage=True, trust_remote_code=True, **kwargs
+            )
+            print("Convert to FP16...")
+            model.to(torch.float16)
         elif model_base:
             print("Loading qwen-vl-chat from base model...")
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
-            config = AutoConfig.from_pretrained(model_path)
+            config = AutoConfig.from_pretrained(model_base)
             model = AutoModelForCausalLM.from_pretrained(
                 model_base, low_cpu_mem_usage=True, config=config, **kwargs
             )

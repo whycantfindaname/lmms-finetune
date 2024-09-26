@@ -3,13 +3,14 @@ from collections import Counter
 from typing import Dict, List, Optional
 import logging
 import torch
+import torch.nn as nn
 import torch.distributed as dist
 import transformers
 from deepspeed import zero
 from torch.utils.data import Sampler
 from transformers import Trainer
-from transformers.trainer import has_length
-
+from transformers.trainer import has_length, get_parameter_names, ALL_LAYERNORM_LAYERS, logger
+import icecream as ic
 
 class NoTextOnlyBatchSampler(Sampler):
     r"""
@@ -191,6 +192,138 @@ class TrainerWithCustomSampler(Trainer):
             is_text_only=is_text_only,
         )
         return iter_indices
+    
+    # def create_optimizer(self):
+        """
+        Setup the optimizer.
+
+        We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
+        Trainer's init through `optimizers`, or subclass and override this method in a subclass.
+        """
+        # if is_sagemaker_mp_enabled():
+        #    return super().create_optimizer()
+        # if self.sharded_ddp == ShardedDDPOption.SIMPLE:
+        #    return super().create_optimizer()
+
+        opt_model = self.model
+
+        if self.optimizer is None:
+            decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
+            decay_parameters = [name for name in decay_parameters if "bias" not in name]
+            if self.args.visual_abstractor_lr is not None:
+                projector_parameters = [
+                    name
+                    for name, _ in opt_model.named_parameters()
+                    if "visual_abstractor_lr" in name
+                ]
+                optimizer_grouped_parameters = [
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n in decay_parameters
+                                and n not in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": self.args.weight_decay,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n not in decay_parameters
+                                and n not in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": 0.0,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n in decay_parameters
+                                and n in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": self.args.weight_decay,
+                        "lr": self.args.visual_abstractor_lr,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n not in decay_parameters
+                                and n in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": 0.0,
+                        "lr": self.args.visual_abstractor_lr,
+                    },
+                ]
+            else:
+                optimizer_grouped_parameters = [
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (n in decay_parameters and p.requires_grad)
+                        ],
+                        "weight_decay": self.args.weight_decay,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (n not in decay_parameters and p.requires_grad)
+                        ],
+                        "weight_decay": 0.0,
+                    },
+                ]
+            # ic| len(optimizer_grouped_parameters[0]["params"]): 173
+            # len(optimizer_grouped_parameters[1]["params"]): 91
+            ic(
+                len(optimizer_grouped_parameters[0]["params"]),
+                len(optimizer_grouped_parameters[1]["params"]),
+            )
+            optimizer_cls, optimizer_kwargs = Trainer.get_optimizer_cls_and_kwargs(
+                self.args
+            )
+
+            if True:
+                self.optimizer = optimizer_cls(
+                    optimizer_grouped_parameters, **optimizer_kwargs
+                )
+                if optimizer_cls.__name__ == "Adam8bit":
+                    import bitsandbytes
+
+                    manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
+
+                    skipped = 0
+                    for module in opt_model.modules():
+                        if isinstance(module, nn.Embedding):
+                            skipped += sum(
+                                {
+                                    p.data_ptr(): p.numel() for p in module.parameters()
+                                }.values()
+                            )
+                            logger.info(f"skipped {module}: {skipped/2**20}M params")
+                            manager.register_module_override(
+                                module, "weight", {"optim_bits": 32}
+                            )
+                            logger.debug(
+                                f"bitsandbytes: will optimize {module} in fp32"
+                            )
+                    logger.info(f"skipped: {skipped/2**20}M params")
+
+        return self.optimizer
 
 
 class TrainerWithWeightedSampler(Trainer):
@@ -219,21 +352,140 @@ class TrainerWithWeightedSampler(Trainer):
         )
         # rank0_print(list(iter_indices))
         return iter_indices
+    
+    # def create_optimizer(self):
+        """
+        Setup the optimizer.
+
+        We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
+        Trainer's init through `optimizers`, or subclass and override this method in a subclass.
+        """
+        # if is_sagemaker_mp_enabled():
+        #    return super().create_optimizer()
+        # if self.sharded_ddp == ShardedDDPOption.SIMPLE:
+        #    return super().create_optimizer()
+
+        opt_model = self.model
+
+        if self.optimizer is None:
+            decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
+            decay_parameters = [name for name in decay_parameters if "bias" not in name]
+            if self.args.visual_abstractor_lr is not None:
+                projector_parameters = [
+                    name
+                    for name, _ in opt_model.named_parameters()
+                    if "visual_abstractor_lr" in name
+                ]
+                optimizer_grouped_parameters = [
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n in decay_parameters
+                                and n not in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": self.args.weight_decay,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n not in decay_parameters
+                                and n not in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": 0.0,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n in decay_parameters
+                                and n in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": self.args.weight_decay,
+                        "lr": self.args.visual_abstractor_lr,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (
+                                n not in decay_parameters
+                                and n in projector_parameters
+                                and p.requires_grad
+                            )
+                        ],
+                        "weight_decay": 0.0,
+                        "lr": self.args.visual_abstractor_lr,
+                    },
+                ]
+            else:
+                optimizer_grouped_parameters = [
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (n in decay_parameters and p.requires_grad)
+                        ],
+                        "weight_decay": self.args.weight_decay,
+                    },
+                    {
+                        "params": [
+                            p
+                            for n, p in opt_model.named_parameters()
+                            if (n not in decay_parameters and p.requires_grad)
+                        ],
+                        "weight_decay": 0.0,
+                    },
+                ]
+            # ic| len(optimizer_grouped_parameters[0]["params"]): 173
+            # len(optimizer_grouped_parameters[1]["params"]): 91
+            ic(
+                len(optimizer_grouped_parameters[0]["params"]),
+                len(optimizer_grouped_parameters[1]["params"]),
+            )
+            optimizer_cls, optimizer_kwargs = Trainer.get_optimizer_cls_and_kwargs(
+                self.args
+            )
+
+            if True:
+                self.optimizer = optimizer_cls(
+                    optimizer_grouped_parameters, **optimizer_kwargs
+                )
+                if optimizer_cls.__name__ == "Adam8bit":
+                    import bitsandbytes
+
+                    manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
+
+                    skipped = 0
+                    for module in opt_model.modules():
+                        if isinstance(module, nn.Embedding):
+                            skipped += sum(
+                                {
+                                    p.data_ptr(): p.numel() for p in module.parameters()
+                                }.values()
+                            )
+                            logger.info(f"skipped {module}: {skipped/2**20}M params")
+                            manager.register_module_override(
+                                module, "weight", {"optim_bits": 32}
+                            )
+                            logger.debug(
+                                f"bitsandbytes: will optimize {module} in fp32"
+                            )
+                    logger.info(f"skipped: {skipped/2**20}M params")
+
+        return self.optimizer
 
     
-    # def _get_eval_sampler(
-    #     self, eval_dataset: torch.utils.data.Dataset
-    # ) -> Optional[torch.utils.data.Sampler]:
-    #     # Should also use weighted sample strategy during evaluation
-    #     weights = eval_dataset.weights
-    #     rank0_print("Data class weights:", weights)
-    #     iter_indices = NoTextOnlyBatchSampler(
-    #         self.args.eval_batch_size,
-    #         world_size=self.args.world_size,
-    #         dataset=eval_dataset,
-    #     )
-    #     rank0_print(list(iter_indices))
-    #     return iter_indices
 
 
 def find_all_linear_names(named_modules: Dict, target_modules: List[str]):
@@ -322,3 +574,19 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
         cpu_state_dict = {key: value.cpu() for key, value in state_dict.items()}
         del state_dict
         trainer._save(output_dir, state_dict=cpu_state_dict)
+
+def get_parameter_names(model, forbidden_layer_types):
+    """
+    Returns the names of the model parameters that are not inside a forbidden layer.
+    """
+    result = []
+    for name, child in model.named_children():
+        result += [
+            f"{name}.{n}"
+            for n in get_parameter_names(child, forbidden_layer_types)
+            if not isinstance(child, tuple(forbidden_layer_types))
+        ]
+    # Add model specific parameters (defined with nn.Parameter) since they are not in any child.
+    result += list(model._parameters.keys())
+    return result
+
